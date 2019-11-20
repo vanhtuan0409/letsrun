@@ -7,10 +7,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 )
 
 var (
@@ -28,13 +26,14 @@ type command struct {
 	c *exec.Cmd
 }
 
-func newCmd(s string, out io.Writer) (*command, error) {
+func newCmd(s string, out io.Writer, outErr io.Writer) (*command, error) {
 	parts, err := splitArgs(s)
 	if err != nil {
 		return nil, err
 	}
 	osCmd := exec.Command(parts[0], parts[1:]...)
 	osCmd.Stdout = out
+	osCmd.Stderr = outErr
 	c := new(command)
 	c.c = osCmd
 	return c, nil
@@ -82,8 +81,9 @@ func main() {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			w := newWriter(index)
-			c, err := newCmd(s, w)
+			out := newWriter(os.Stdout, index)
+			outErr := newWriter(os.Stderr, index)
+			c, err := newCmd(s, out, outErr)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -93,15 +93,6 @@ func main() {
 			}
 		}(i, cmd)
 	}
-
-	sigs := make(chan os.Signal)
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sig := <-sigs
-		for _, cmd := range cmdList {
-			cmd.c.Process.Signal(sig)
-		}
-	}()
 
 	wg.Wait()
 }
