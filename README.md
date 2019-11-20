@@ -9,7 +9,7 @@ If you like my work, consider buy me a coffee :D
 ### Installation
 
 ```
-go install github.com/vanhtuan04094/letsrun
+go install github.com/vanhtuan0409/letsrun
 ```
 
 ### Example
