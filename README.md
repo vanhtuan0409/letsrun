@@ -8,7 +8,9 @@ If you like my work, consider buy me a coffee :D
 
 ### Installation
 
+#### Build from source
 ```
+go get github.com/vanhtuan0409/letsrun
 go install github.com/vanhtuan0409/letsrun
 ```
 
