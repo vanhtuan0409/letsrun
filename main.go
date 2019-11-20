@@ -17,6 +17,13 @@ var (
 	delimiter = flag.String("F", ";;", "Commands delimiter")
 )
 
+func usage() {
+	fmt.Printf("Usage: %s [OPTIONS] COMMAND\n\n", os.Args[0])
+	fmt.Print("Background command runner and combine output into stdout\n\n")
+	fmt.Println("Options:")
+	flag.PrintDefaults()
+}
+
 type command struct {
 	c *exec.Cmd
 }
@@ -57,11 +64,14 @@ func splitArgs(cmd string) ([]string, error) {
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 
 	args := flag.Args()
 	if len(args) < 1 {
-		panic("Invalid arguments. Missing commands")
+		fmt.Println("Invalid arguments. Missing commands")
+		flag.Usage()
+		os.Exit(1)
 	}
 
 	cmds := splitCommand(args[0], *delimiter)
