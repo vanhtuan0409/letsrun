@@ -29,3 +29,7 @@ Options:
   -F string
     	Commands delimiter (default ";;")
 ```
+
+### Screenshot
+
+![](screenshot/image.png)
