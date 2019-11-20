@@ -18,7 +18,7 @@ var (
 )
 
 func usage() {
-	fmt.Printf("Usage: %s [OPTIONS] COMMAND\n\n", os.Args[0])
+	fmt.Printf("Usage: %s [OPTIONS] COMMANDS\n\n", os.Args[0])
 	fmt.Print("Background command runner and combine output into stdout\n\n")
 	fmt.Println("Options:")
 	flag.PrintDefaults()
