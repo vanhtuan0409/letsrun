@@ -11,14 +11,9 @@ import (
 	"sync"
 )
 
-var (
-	delimiter = flag.String("F", ";;", "Commands delimiter")
-)
-
 func usage() {
 	fmt.Printf("Usage: %s [OPTIONS] COMMANDS\n\n", os.Args[0])
 	fmt.Print("Background command runner and combine output into stdout\n\n")
-	fmt.Println("Options:")
 	flag.PrintDefaults()
 }
 
@@ -66,14 +61,12 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	args := flag.Args()
-	if len(args) < 1 {
+	cmds := flag.Args()
+	if len(cmds) < 1 {
 		fmt.Println("Invalid arguments. Missing commands")
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	cmds := splitCommand(args[0], *delimiter)
 
 	var wg sync.WaitGroup
 	cmdList := []*command{}

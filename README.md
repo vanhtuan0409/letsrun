@@ -17,19 +17,15 @@ go install github.com/vanhtuan0409/letsrun
 ### Example
 
 ```
-letsrun "sleep 60;; sleep 60;; echo Hello"
+letsrun "sleep 10" "sleep 10" "echo Hello"
 ```
 
 ### Usage manual
 
 ```
-Usage: letsrun [OPTIONS] COMMANDS
+Usage: /tmp/go-build014803794/b001/exe/main [OPTIONS] COMMANDS
 
 Background command runner and combine output into stdout
-
-Options:
-  -F string
-    	Commands delimiter (default ";;")
 ```
 
 ### Screenshot
