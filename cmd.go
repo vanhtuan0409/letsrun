@@ -43,14 +43,15 @@ func newCmd(s string, id string) (*command, error) {
 		return nil, err
 	}
 	c.c = osCmd
-
-	c.outputFormatter = newTimestampFormatter().wrap(newPrefixFormatter(fmt.Sprintf("[%s] ", c.id)))
-
 	return c, nil
 }
 
 func (c *command) setOutput(out io.Writer) {
 	c.out = out
+}
+
+func (c *command) wrapFormatter(f formatter) {
+	c.outputFormatter = f.wrap(c.outputFormatter)
 }
 
 func (c *command) captureOutput() {

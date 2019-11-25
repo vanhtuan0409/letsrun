@@ -26,7 +26,6 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	cmdList := []*command{}
 	for i, cmd := range cmds {
 		wg.Add(1)
 		go func(index int, s string) {
@@ -36,7 +35,12 @@ func main() {
 				fmt.Println(err)
 			}
 			c.setOutput(os.Stdout)
-			cmdList = append(cmdList, c)
+
+			cl := (index % 6) + 31
+			c.outputFormatter = newPrefixFormatter(fmt.Sprintf("[%d] ", index))
+			c.wrapFormatter(newTimestampFormatter())
+			c.wrapFormatter(newColorFormatter(cl))
+
 			if err := c.Run(); err != nil {
 				fmt.Println(err)
 			}

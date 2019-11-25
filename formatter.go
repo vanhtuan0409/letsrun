@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 func init() {
@@ -59,4 +61,28 @@ func (t *timestampFormatter) format(s string) string {
 	}
 	timeStr := time.Now().Format(time.RFC822)
 	return fmt.Sprintf("%s %s", timeStr, preformatted)
+}
+
+type colorFormatter struct {
+	c      *color.Color
+	parent formatter
+}
+
+func newColorFormatter(colorCode int) *colorFormatter {
+	f := new(colorFormatter)
+	f.c = color.New(color.Attribute(colorCode))
+	return f
+}
+
+func (c *colorFormatter) wrap(f formatter) formatter {
+	c.parent = f
+	return c
+}
+
+func (c *colorFormatter) format(s string) string {
+	preformatted := s
+	if c.parent != nil {
+		preformatted = c.parent.format(s)
+	}
+	return c.c.Sprint(preformatted)
 }
