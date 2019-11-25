@@ -1,15 +1,10 @@
 package main
 
 import (
-	"bufio"
-	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -17,61 +12,6 @@ func usage() {
 	fmt.Printf("Usage: %s [OPTIONS] COMMANDS\n\n", os.Args[0])
 	fmt.Print("Background command runner and combine output into stdout\n\n")
 	flag.PrintDefaults()
-}
-
-type command struct {
-	c             *exec.Cmd
-	id            string
-	out           chan<- string
-	outputScanner *bufio.Scanner
-}
-
-func getCmdOutputScanner(cmd *exec.Cmd) (*bufio.Scanner, error) {
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	return bufio.NewScanner(io.MultiReader(stdout, stderr)), nil
-}
-
-func newCmd(s string, id string, out chan<- string) (*command, error) {
-	var err error
-	parts, err := splitArgs(s)
-	if err != nil {
-		return nil, err
-	}
-
-	c := new(command)
-	c.out = out
-	osCmd := exec.Command(parts[0], parts[1:]...)
-	if c.outputScanner, err = getCmdOutputScanner(osCmd); err != nil {
-		return nil, err
-	}
-	c.c = osCmd
-	return c, nil
-}
-
-func (c *command) Run() error {
-	go func() {
-		for c.outputScanner.Scan() {
-			c.out <- c.outputScanner.Text()
-		}
-	}()
-	return c.c.Run()
-}
-
-func splitArgs(cmd string) ([]string, error) {
-	r := csv.NewReader(strings.NewReader(cmd))
-	r.Comma = ' '
-	fields, err := r.Read()
-	if err != nil {
-		return nil, err
-	}
-	return fields, nil
 }
 
 func main() {
