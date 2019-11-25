@@ -8,10 +8,31 @@ import (
 	"sync"
 )
 
+var (
+	colorized = flag.Bool("c", true, "Print colorized output")
+	timestamp = flag.Bool("t", false, "Print timestamp to output")
+	indicator = flag.Bool("i", true, "Printa command index indicator")
+)
+
 func usage() {
 	fmt.Printf("Usage: %s [OPTIONS] COMMANDS\n\n", os.Args[0])
 	fmt.Print("Background command runner and combine output into stdout\n\n")
+	fmt.Println("Options:")
 	flag.PrintDefaults()
+}
+
+func formatCmdOutput(cmd *command, index int) {
+	cl := (index % 6) + 31 // Limit number of color due to available constants in color lib
+	cmd.outputFormatter = newNoopFormatter()
+	if *indicator {
+		cmd.outputFormatter = newPrefixFormatter(fmt.Sprintf("[%d] ", index+1))
+	}
+	if *timestamp {
+		cmd.wrapFormatter(newTimestampFormatter())
+	}
+	if *colorized {
+		cmd.wrapFormatter(newColorFormatter(cl))
+	}
 }
 
 func main() {
@@ -35,11 +56,7 @@ func main() {
 				fmt.Println(err)
 			}
 			c.setOutput(os.Stdout)
-
-			cl := (index % 6) + 31
-			c.outputFormatter = newPrefixFormatter(fmt.Sprintf("[%d] ", index))
-			c.wrapFormatter(newTimestampFormatter())
-			c.wrapFormatter(newColorFormatter(cl))
+			formatCmdOutput(c, index)
 
 			if err := c.Run(); err != nil {
 				fmt.Println(err)

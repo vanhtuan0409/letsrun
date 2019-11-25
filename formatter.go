@@ -17,6 +17,21 @@ type formatter interface {
 	wrap(f formatter) formatter
 }
 
+type noopFormatter struct {
+}
+
+func newNoopFormatter() *noopFormatter {
+	return new(noopFormatter)
+}
+
+func (n *noopFormatter) wrap(f formatter) formatter {
+	return n
+}
+
+func (n *noopFormatter) format(s string) string {
+	return s
+}
+
 type prefixFormatter struct {
 	prefix string
 	parent formatter
