@@ -5,8 +5,10 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -18,44 +20,45 @@ func usage() {
 }
 
 type command struct {
-	c      *exec.Cmd
-	stdout *bufio.Scanner
-	stderr *bufio.Scanner
+	c             *exec.Cmd
+	id            string
+	out           chan<- string
+	outputScanner *bufio.Scanner
 }
 
-func newCmd(s string) (*command, error) {
+func getCmdOutputScanner(cmd *exec.Cmd) (*bufio.Scanner, error) {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	return bufio.NewScanner(io.MultiReader(stdout, stderr)), nil
+}
+
+func newCmd(s string, id string, out chan<- string) (*command, error) {
+	var err error
 	parts, err := splitArgs(s)
 	if err != nil {
 		return nil, err
 	}
 
 	c := new(command)
-
+	c.out = out
 	osCmd := exec.Command(parts[0], parts[1:]...)
-	stdout, err := osCmd.StdoutPipe()
-	if err != nil {
+	if c.outputScanner, err = getCmdOutputScanner(osCmd); err != nil {
 		return nil, err
 	}
-	c.stdout = bufio.NewScanner(stdout)
-	stderr, err := osCmd.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	c.stderr = bufio.NewScanner(stderr)
-
 	c.c = osCmd
 	return c, nil
 }
 
 func (c *command) Run() error {
 	go func() {
-		for c.stdout.Scan() {
-			fmt.Println(c.stdout.Text())
-		}
-	}()
-	go func() {
-		for c.stderr.Scan() {
-			fmt.Println(c.stderr.Text())
+		for c.outputScanner.Scan() {
+			c.out <- c.outputScanner.Text()
 		}
 	}()
 	return c.c.Run()
@@ -82,13 +85,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	outChan := make(chan string)
+	defer close(outChan)
+
 	var wg sync.WaitGroup
 	cmdList := []*command{}
 	for i, cmd := range cmds {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			c, err := newCmd(s)
+			c, err := newCmd(s, strconv.Itoa(index), outChan)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -98,6 +104,12 @@ func main() {
 			}
 		}(i, cmd)
 	}
+
+	go func() {
+		for line := range outChan {
+			fmt.Println(line)
+		}
+	}()
 
 	wg.Wait()
 }
