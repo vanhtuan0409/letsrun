@@ -25,16 +25,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	outChan := make(chan string)
-	defer close(outChan)
-
 	var wg sync.WaitGroup
 	cmdList := []*command{}
 	for i, cmd := range cmds {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			c, err := newCmd(s, strconv.Itoa(index), outChan)
+			c, err := newCmd(s, strconv.Itoa(index))
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -44,12 +41,6 @@ func main() {
 			}
 		}(i, cmd)
 	}
-
-	go func() {
-		for line := range outChan {
-			fmt.Println(line)
-		}
-	}()
 
 	wg.Wait()
 }

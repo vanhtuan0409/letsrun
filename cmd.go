@@ -3,15 +3,16 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"fmt"
 	"os/exec"
 	"strings"
 )
 
 type command struct {
-	c             *exec.Cmd
-	id            string
-	out           chan<- string
-	outputScanner *bufio.Scanner
+	c               *exec.Cmd
+	id              string
+	outputFormatter formatter
+	outputScanner   *bufio.Scanner
 }
 
 func splitArgs(cmd string) ([]string, error) {
@@ -24,7 +25,7 @@ func splitArgs(cmd string) ([]string, error) {
 	return fields, nil
 }
 
-func newCmd(s string, id string, out chan<- string) (*command, error) {
+func newCmd(s string, id string) (*command, error) {
 	var err error
 	parts, err := splitArgs(s)
 	if err != nil {
@@ -32,19 +33,23 @@ func newCmd(s string, id string, out chan<- string) (*command, error) {
 	}
 
 	c := new(command)
-	c.out = out
+	c.id = id
 	osCmd := exec.Command(parts[0], parts[1:]...)
 	if c.outputScanner, err = getCmdOutputScanner(osCmd); err != nil {
 		return nil, err
 	}
 	c.c = osCmd
+	c.outputFormatter = newPrefixFormatter(fmt.Sprintf("[%s] ", c.id))
 	return c, nil
 }
 
 func (c *command) Run() error {
 	go func() {
 		for c.outputScanner.Scan() {
-			c.out <- c.outputScanner.Text()
+			line := c.outputScanner.Text()
+			if c.outputFormatter != nil {
+				fmt.Println(c.outputFormatter.format(line))
+			}
 		}
 	}()
 	return c.c.Run()
