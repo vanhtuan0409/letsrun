@@ -23,9 +23,14 @@ letsrun "sleep 10" "sleep 10" "echo Hello"
 ### Usage manual
 
 ```
-Usage: /tmp/go-build014803794/b001/exe/main [OPTIONS] COMMANDS
+Usage: letsrun [OPTIONS] COMMANDS
 
 Background command runner and combine output into stdout
+
+Options:
+  -c	Print colorized output (default true)
+  -i	Print command index indicator (default true)
+  -t	Print timestamp to output
 ```
 
 ### Screenshot
