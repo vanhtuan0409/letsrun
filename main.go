@@ -1,60 +1,38 @@
 package main
 
 import (
-	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
-	"os/exec"
-	"strings"
+	"strconv"
 	"sync"
+)
+
+var (
+	colorized = flag.Bool("c", true, "Print colorized output")
+	timestamp = flag.Bool("t", false, "Print timestamp to output")
+	indicator = flag.Bool("i", true, "Printa command index indicator")
 )
 
 func usage() {
 	fmt.Printf("Usage: %s [OPTIONS] COMMANDS\n\n", os.Args[0])
 	fmt.Print("Background command runner and combine output into stdout\n\n")
+	fmt.Println("Options:")
 	flag.PrintDefaults()
 }
 
-type command struct {
-	c *exec.Cmd
-}
-
-func newCmd(s string, out io.Writer, outErr io.Writer) (*command, error) {
-	parts, err := splitArgs(s)
-	if err != nil {
-		return nil, err
+func formatCmdOutput(cmd *command, index int) {
+	cl := (index % 6) + 31 // Limit number of color due to available constants in color lib
+	cmd.outputFormatter = newNoopFormatter()
+	if *indicator {
+		cmd.outputFormatter = newPrefixFormatter(fmt.Sprintf("[%d] ", index+1))
 	}
-	osCmd := exec.Command(parts[0], parts[1:]...)
-	osCmd.Stdout = out
-	osCmd.Stderr = outErr
-	c := new(command)
-	c.c = osCmd
-	return c, nil
-}
-
-func (c *command) Run() error {
-	return c.c.Run()
-}
-
-func splitCommand(s string, d string) []string {
-	d = strings.TrimSpace(d)
-	cmds := strings.Split(s, d)
-	for i := range cmds {
-		cmds[i] = strings.TrimSpace(cmds[i])
+	if *timestamp {
+		cmd.wrapFormatter(newTimestampFormatter())
 	}
-	return cmds
-}
-
-func splitArgs(cmd string) ([]string, error) {
-	r := csv.NewReader(strings.NewReader(cmd))
-	r.Comma = ' '
-	fields, err := r.Read()
-	if err != nil {
-		return nil, err
+	if *colorized {
+		cmd.wrapFormatter(newColorFormatter(cl))
 	}
-	return fields, nil
 }
 
 func main() {
@@ -69,18 +47,17 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	cmdList := []*command{}
 	for i, cmd := range cmds {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			out := newWriter(os.Stdout, index)
-			outErr := newWriter(os.Stderr, index)
-			c, err := newCmd(s, out, outErr)
+			c, err := newCmd(s, strconv.Itoa(index))
 			if err != nil {
 				fmt.Println(err)
 			}
-			cmdList = append(cmdList, c)
+			c.setOutput(os.Stdout)
+			formatCmdOutput(c, index)
+
 			if err := c.Run(); err != nil {
 				fmt.Println(err)
 			}
