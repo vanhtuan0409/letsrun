@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,33 +18,47 @@ func usage() {
 }
 
 type command struct {
-	c *exec.Cmd
+	c      *exec.Cmd
+	stdout *bufio.Scanner
+	stderr *bufio.Scanner
 }
 
-func newCmd(s string, out io.Writer, outErr io.Writer) (*command, error) {
+func newCmd(s string) (*command, error) {
 	parts, err := splitArgs(s)
 	if err != nil {
 		return nil, err
 	}
-	osCmd := exec.Command(parts[0], parts[1:]...)
-	osCmd.Stdout = out
-	osCmd.Stderr = outErr
+
 	c := new(command)
+
+	osCmd := exec.Command(parts[0], parts[1:]...)
+	stdout, err := osCmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	c.stdout = bufio.NewScanner(stdout)
+	stderr, err := osCmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	c.stderr = bufio.NewScanner(stderr)
+
 	c.c = osCmd
 	return c, nil
 }
 
 func (c *command) Run() error {
+	go func() {
+		for c.stdout.Scan() {
+			fmt.Println(c.stdout.Text())
+		}
+	}()
+	go func() {
+		for c.stderr.Scan() {
+			fmt.Println(c.stderr.Text())
+		}
+	}()
 	return c.c.Run()
-}
-
-func splitCommand(s string, d string) []string {
-	d = strings.TrimSpace(d)
-	cmds := strings.Split(s, d)
-	for i := range cmds {
-		cmds[i] = strings.TrimSpace(cmds[i])
-	}
-	return cmds
 }
 
 func splitArgs(cmd string) ([]string, error) {
@@ -74,9 +88,7 @@ func main() {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			out := newWriter(os.Stdout, index)
-			outErr := newWriter(os.Stderr, index)
-			c, err := newCmd(s, out, outErr)
+			c, err := newCmd(s)
 			if err != nil {
 				fmt.Println(err)
 			}
