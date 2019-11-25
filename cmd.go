@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 )
@@ -11,6 +12,7 @@ import (
 type command struct {
 	c               *exec.Cmd
 	id              string
+	out             io.Writer
 	outputFormatter formatter
 	outputScanner   *bufio.Scanner
 }
@@ -25,7 +27,7 @@ func splitArgs(cmd string) ([]string, error) {
 	return fields, nil
 }
 
-func newCmd(s string, id string) (*command, error) {
+func newCmd(s string, id string, out io.Writer) (*command, error) {
 	var err error
 	parts, err := splitArgs(s)
 	if err != nil {
@@ -34,6 +36,7 @@ func newCmd(s string, id string) (*command, error) {
 
 	c := new(command)
 	c.id = id
+	c.out = out
 	osCmd := exec.Command(parts[0], parts[1:]...)
 	if c.outputScanner, err = getCmdOutputScanner(osCmd); err != nil {
 		return nil, err
@@ -43,14 +46,18 @@ func newCmd(s string, id string) (*command, error) {
 	return c, nil
 }
 
-func (c *command) Run() error {
-	go func() {
-		for c.outputScanner.Scan() {
-			line := c.outputScanner.Text()
-			if c.outputFormatter != nil {
-				fmt.Println(c.outputFormatter.format(line))
-			}
+func (c *command) captureOutput() {
+	for c.outputScanner.Scan() {
+		line := c.outputScanner.Text() + "\n"
+		if c.outputFormatter != nil {
+			line = c.outputFormatter.format((line))
 		}
-	}()
+		fmt.Fprintf(c.out, line)
+	}
+
+}
+
+func (c *command) Run() error {
+	go c.captureOutput()
 	return c.c.Run()
 }

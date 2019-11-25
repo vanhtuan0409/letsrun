@@ -31,7 +31,7 @@ func main() {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			c, err := newCmd(s, strconv.Itoa(index))
+			c, err := newCmd(s, strconv.Itoa(index), os.Stdout)
 			if err != nil {
 				fmt.Println(err)
 			}
