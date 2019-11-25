@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 )
@@ -27,7 +28,7 @@ func splitArgs(cmd string) ([]string, error) {
 	return fields, nil
 }
 
-func newCmd(s string, id string, out io.Writer) (*command, error) {
+func newCmd(s string, id string) (*command, error) {
 	var err error
 	parts, err := splitArgs(s)
 	if err != nil {
@@ -36,7 +37,7 @@ func newCmd(s string, id string, out io.Writer) (*command, error) {
 
 	c := new(command)
 	c.id = id
-	c.out = out
+	c.out = ioutil.Discard
 	osCmd := exec.Command(parts[0], parts[1:]...)
 	if c.outputScanner, err = getCmdOutputScanner(osCmd); err != nil {
 		return nil, err
@@ -46,6 +47,10 @@ func newCmd(s string, id string, out io.Writer) (*command, error) {
 	c.outputFormatter = newTimestampFormatter().wrap(newPrefixFormatter(fmt.Sprintf("[%s] ", c.id)))
 
 	return c, nil
+}
+
+func (c *command) setOutput(out io.Writer) {
+	c.out = out
 }
 
 func (c *command) captureOutput() {

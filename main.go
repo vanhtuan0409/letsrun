@@ -31,10 +31,11 @@ func main() {
 		wg.Add(1)
 		go func(index int, s string) {
 			defer wg.Done()
-			c, err := newCmd(s, strconv.Itoa(index), os.Stdout)
+			c, err := newCmd(s, strconv.Itoa(index))
 			if err != nil {
 				fmt.Println(err)
 			}
+			c.setOutput(os.Stdout)
 			cmdList = append(cmdList, c)
 			if err := c.Run(); err != nil {
 				fmt.Println(err)
